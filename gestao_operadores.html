@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Operadores</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+:root{
+  --green:#2d7a2d;--green2:#4aaa2a;--green3:#e8f5e0;--green4:#1a5a1a;
+  --orange:#f5a623;--orange2:#e8921a;--orange3:#fff8ed;
+  --red:#dc2626;--red2:#fee2e2;
+  --bg:#f4f7f4;--surface:#fff;--border:#d4e8d4;--border2:#e8f0e8;
+  --text:#1a2e1a;--text2:#4a6a4a;--text3:#8aaa8a;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 3px rgba(45,122,45,.08),0 1px 2px rgba(45,122,45,.05);
+  --shadow-md:0 4px 12px rgba(45,122,45,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── LAYOUT ── */
+.app{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:230px;background:var(--green4);display:flex;flex-direction:column;flex-shrink:0;transition:width .25s;}
+.logo-area{padding:22px 18px 18px;border-bottom:1px solid rgba(255,255,255,.1);}
+.logo-circle{width:46px;height:46px;background:var(--orange);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:10px;}
+.logo-title{font-size:15px;font-weight:700;color:#fff;line-height:1.2;}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;}
+.nav{padding:14px 10px;flex:1;overflow-y:auto;}
+.nav-section{font-size:10px;font-weight:600;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.8px;padding:4px 10px 8px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:500;color:rgba(255,255,255,.65);transition:all .15s;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,.1);color:#fff;}
+.nav-item.active{background:var(--orange);color:#fff;}
+.nav-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;}
+.nav-badge.orange{background:var(--orange2);}
+.sdiv{height:1px;background:rgba(255,255,255,.1);margin:8px 12px;}
+.sidebar-bottom{padding:14px 10px;border-top:1px solid rgba(255,255,255,.1);}
+.sync-btn{width:100%;padding:9px 12px;background:var(--green2);color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.sync-btn:hover{background:#3a9a1a;}
+.sync-status{font-size:10px;color:rgba(255,255,255,.4);text-align:center;margin-top:6px;}
+.reset-btn{width:100%;padding:8px;background:rgba(220,38,38,.2);color:#fca5a5;border:1px solid rgba(220,38,38,.3);border-radius:var(--radius-sm);font-size:11px;font-weight:500;cursor:pointer;margin-top:6px;}
+.reset-btn:hover{background:rgba(220,38,38,.35);}
+
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:10;}
+.tb-left{display:flex;align-items:center;gap:10px;}
+.hamburger{display:none;background:none;border:none;cursor:pointer;font-size:20px;color:var(--text2);padding:4px;}
+.tb-title{font-size:16px;font-weight:700;color:var(--text);}
+.tb-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.tb-right{display:flex;align-items:center;gap:8px;}
+.content{padding:20px 24px;flex:1;}
+
+/* ── PAGES ── */
+.page{display:none;}.page.active{display:block;}
+
+/* ── CAPA ── */
+.capa-bg{min-height:calc(100vh - 57px);display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#e8f5e0 0%,#fff8ed 100%);}
+.capa-card{background:var(--surface);border-radius:20px;padding:44px 40px;max-width:500px;width:100%;text-align:center;box-shadow:var(--shadow-md);border:1px solid var(--border);}
+.capa-icon{width:88px;height:88px;background:linear-gradient(135deg,var(--green),var(--green2));border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:42px;margin:0 auto 22px;}
+.capa-h1{font-size:28px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.capa-h2{font-size:13px;color:var(--text3);margin-bottom:28px;line-height:1.5;}
+.capa-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+.ck{background:var(--bg);border-radius:var(--radius-sm);padding:14px 10px;border:1px solid var(--border);}
+.ck-v{font-size:22px;font-weight:700;}
+.ck-l{font-size:10px;color:var(--text3);margin-top:3px;}
+.ck.green .ck-v{color:var(--green);}
+.ck.orange .ck-v{color:var(--orange2);}
+.ck.red .ck-v{color:var(--red);}
+.capa-btn{width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;margin-bottom:10px;}
+.capa-btn:hover{background:var(--green4);}
+.capa-btn2{width:100%;padding:11px;background:var(--orange);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;}
+.capa-btn2:hover{background:var(--orange2);}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+.kpi-label{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.kpi-value{font-size:24px;font-weight:700;}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+.kpi-card.green .kpi-value{color:var(--green);}
+.kpi-card.orange .kpi-value{color:var(--orange2);}
+.kpi-card.red .kpi-value{color:var(--red);}
+.kpi-card.blue .kpi-value{color:#2563eb;}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:16px;}
+.card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;}
+
+/* ── OPERADOR CARD ── */
+.op-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:16px;}
+.op-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);transition:all .2s;cursor:pointer;}
+.op-card:hover{box-shadow:var(--shadow-md);border-color:var(--green2);}
+.op-card.vencido{border-left:4px solid var(--red);}
+.op-card.alerta{border-left:4px solid var(--orange);}
+.op-card.valido{border-left:4px solid var(--green2);}
+.op-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.op-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:700;flex-shrink:0;}
+.op-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
+.op-name{font-size:14px;font-weight:700;color:var(--text);}
+.op-mat{font-size:11px;color:var(--text3);margin-top:1px;}
+.op-body{display:flex;flex-direction:column;gap:6px;}
+.op-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;}
+.op-row-label{color:var(--text3);}
+.op-row-val{font-weight:500;color:var(--text);}
+.op-footer{margin-top:12px;padding-top:10px;border-top:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;}
+.dias-badge{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;}
+.dias-badge.valido{color:var(--green);}
+.dias-badge.alerta{color:var(--orange2);}
+.dias-badge.vencido{color:var(--red);}
+.status-pill{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.sp-valido{background:var(--green3);color:var(--green4);}
+.sp-alerta{background:var(--orange3);color:#92400e;}
+.sp-vencido{background:var(--red2);color:#991b1b;}
+
+/* ── VENCIMENTOS LIST ── */
+.venc-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px;transition:all .15s;}
+.venc-item:hover{box-shadow:var(--shadow);}
+.venc-item.vencido{border-left:4px solid var(--red);background:#fffafa;}
+.venc-item.alerta{border-left:4px solid var(--orange);background:#fffdf7;}
+.venc-item.valido{border-left:4px solid var(--green2);}
+.venc-ico{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.venc-ico.vencido{background:var(--red2);}
+.venc-ico.alerta{background:var(--orange3);}
+.venc-ico.valido{background:var(--green3);}
+.venc-info{flex:1;}
+.venc-name{font-size:13px;font-weight:700;color:var(--text);}
+.venc-detail{font-size:11px;color:var(--text3);margin-top:2px;}
+.venc-right{text-align:right;}
+.venc-dias{font-size:15px;font-weight:700;}
+.venc-dias.vencido{color:var(--red);}
+.venc-dias.alerta{color:var(--orange2);}
+.venc-dias.valido{color:var(--green);}
+.venc-data{font-size:10px;color:var(--text3);margin-top:2px;}
+
+/* ── ALERTA BANNER ── */
+.alert-banner{background:linear-gradient(135deg,#fff8ed,#fef3c7);border:1px solid var(--orange);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;}
+.alert-banner.red{background:linear-gradient(135deg,#fff5f5,#fee2e2);border-color:var(--red);}
+.alert-ico{font-size:24px;flex-shrink:0;}
+.alert-txt{flex:1;}
+.alert-title{font-size:13px;font-weight:700;color:var(--orange2);}
+.alert-title.red{color:var(--red);}
+.alert-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* ── CHART ── */
+.chart-wrap{position:relative;height:220px;}
+.chart-wrap-sm{position:relative;height:160px;}
+
+/* ── FORMS ── */
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.form-label{font-size:12px;font-weight:600;color:var(--text2);}
+.form-input{padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface);outline:none;transition:border .15s;}
+.form-input:focus{border-color:var(--green);}
+.form-select{padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface);outline:none;}
+.form-select:focus{border-color:var(--green);}
+.form-hint{font-size:11px;color:var(--text3);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.form-section{font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--green3);}
+
+/* ── BTNS ── */
+.btn{padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.btn-primary{background:var(--green);color:#fff;}.btn-primary:hover{background:var(--green4);}
+.btn-orange{background:var(--orange);color:#fff;}.btn-orange:hover{background:var(--orange2);}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2);}.btn-outline:hover{background:var(--bg);}
+.btn-excel{background:#217346;color:#fff;display:flex;align-items:center;gap:6px;}.btn-excel:hover{background:#1a5c38;}
+.btn-full{width:100%;}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.filter-select{padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text2);background:var(--surface);outline:none;}
+.search-input{padding:8px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface);outline:none;flex:1;min-width:200px;}
+.search-input:focus{border-color:var(--green);}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;font-weight:700;color:var(--text3);padding:8px 12px;border-bottom:2px solid var(--border);white-space:nowrap;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}
+td{padding:10px 12px;border-bottom:1px solid var(--border2);color:var(--text);}
+tr:hover td{background:var(--bg);}
+tr:last-child td{border-bottom:none;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:12px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;z-index:9999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{background:var(--green);}
+.toast.error{background:var(--red);}
+.toast.warning{background:var(--orange2);}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:16px;padding:28px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:4px;color:var(--text);}
+.modal-sub{font-size:12px;color:var(--text3);margin-bottom:20px;}
+.modal-close{float:right;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);margin-top:-6px;}
+
+/* ── EQUIP TAGS ── */
+.equip-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.etag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;background:var(--green3);color:var(--green4);border:1px solid var(--border);}
+.etag.orange{background:var(--orange3);color:#92400e;}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:40px;color:var(--text3);}
+.empty-ico{font-size:48px;margin-bottom:12px;}
+.empty-txt{font-size:13px;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:-230px;top:0;height:100vh;z-index:100;transition:left .25s;}
+  .sidebar.open{left:0;box-shadow:4px 0 20px rgba(0,0,0,.2);}
+  .hamburger{display:block;}
+  .content{padding:14px 16px;}
+  .g2,.g3,.form-row,.form-row-3{grid-template-columns:1fr;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .topbar{padding:12px 16px;}
+  .capa-kpis{grid-template-columns:1fr;}
+  .op-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="logo-area">
+    <div class="logo-circle">🏭</div>
+    <div class="logo-title">Gestão de Operadores</div>
+    <div class="logo-sub">Controle de habilitações</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="goTo('capa',this)"><span class="nav-ico">🏠</span>Início</div>
+    <div class="nav-item" onclick="goTo('dashboard',this)"><span class="nav-ico">📊</span>Dashboard</div>
+    <div class="sdiv"></div>
+    <div class="nav-section">Gestão</div>
+    <div class="nav-item" onclick="goTo('operadores',this)"><span class="nav-ico">👷</span>Operadores</div>
+    <div class="nav-item" onclick="goTo('vencimentos',this)"><span class="nav-ico">⏰</span>Vencimentos<span class="nav-badge" id="nb-venc">0</span></div>
+    <div class="nav-item" onclick="goTo('historico',this)"><span class="nav-ico">📋</span>Histórico</div>
+    <div class="sdiv"></div>
+    <div class="nav-section">Cadastro</div>
+    <div class="nav-item" onclick="goTo('cadastro',this)"><span class="nav-ico">➕</span>Novo Operador</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <button class="reset-btn" onclick="resetDados()">🗑️ Resetar dados</button>
+    <div class="sync-status" id="syncStatus">Conectando ao Firebase...</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="tb-left">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <div>
+        <div class="tb-title" id="pageTitle">Gestão de Operadores</div>
+        <div class="tb-sub" id="pageSub">Controle de habilitações e vencimentos</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <button class="btn btn-outline" onclick="goTo('capa',null)" style="font-size:12px;">🏠 Início</button>
+      <button class="btn btn-excel" onclick="exportExcel()">📊 Excel</button>
+      <button class="btn btn-orange" onclick="goTo('cadastro',null)" style="font-size:12px;">➕ Novo</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- CAPA -->
+    <div class="page active" id="page-capa">
+      <div class="capa-bg">
+        <div class="capa-card">
+          <div class="capa-icon">👷</div>
+          <div class="capa-h1">Gestão de Operadores</div>
+          <div class="capa-h2">Controle completo de habilitações, cursos e vencimentos de operadores de equipamentos de movimentação</div>
+          <div class="capa-kpis">
+            <div class="ck green"><div class="ck-v" id="cap-validos">0</div><div class="ck-l">✅ Válidos</div></div>
+            <div class="ck orange"><div class="ck-v" id="cap-alerta">0</div><div class="ck-l">⚠️ Alerta 30d</div></div>
+            <div class="ck red"><div class="ck-v" id="cap-vencidos">0</div><div class="ck-l">🔴 Vencidos</div></div>
+          </div>
+          <button class="capa-btn" onclick="goTo('dashboard',null)">📊 Ver Dashboard</button>
+          <button class="capa-btn2" onclick="goTo('vencimentos',null)">⏰ Ver Vencimentos</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="page" id="page-dashboard">
+      <div id="alertBanners"></div>
+      <div class="kpi-grid">
+        <div class="kpi-card blue"><div class="kpi-label">Total operadores</div><div class="kpi-value" id="kpi-total">0</div><div class="kpi-sub">cadastrados</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Habilitados</div><div class="kpi-value" id="kpi-validos">0</div><div class="kpi-sub">certificado válido</div></div>
+        <div class="kpi-card orange"><div class="kpi-label">Atenção</div><div class="kpi-value" id="kpi-alerta">0</div><div class="kpi-sub">vencem em 30 dias</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Vencidos</div><div class="kpi-value" id="kpi-vencidos">0</div><div class="kpi-sub">renovação necessária</div></div>
+      </div>
+      <div class="g2">
+        <div class="card"><div class="card-title">📊 Status dos operadores</div><div class="chart-wrap"><canvas id="chartStatus" role="img" aria-label="Status">Status.</canvas></div></div>
+        <div class="card"><div class="card-title">🏭 Por tipo de equipamento</div><div class="chart-wrap"><canvas id="chartEquip" role="img" aria-label="Equipamentos">Equipamentos.</canvas></div></div>
+      </div>
+      <div class="card"><div class="card-title">⏰ Próximos vencimentos (30 dias)</div><div id="dashVencimentos"></div></div>
+    </div>
+
+    <!-- OPERADORES -->
+    <div class="page" id="page-operadores">
+      <div class="filter-bar">
+        <input class="search-input" type="text" placeholder="🔍 Buscar por nome ou matrícula..." oninput="renderOperadores()">
+        <select class="filter-select" id="filtStatus" onchange="renderOperadores()">
+          <option value="">Todos os status</option>
+          <option value="valido">✅ Válidos</option>
+          <option value="alerta">⚠️ Alerta</option>
+          <option value="vencido">🔴 Vencidos</option>
+        </select>
+        <select class="filter-select" id="filtEquip" onchange="renderOperadores()">
+          <option value="">Todos equipamentos</option>
+          <option value="Empilhadeira GLP">Empilhadeira GLP</option>
+          <option value="Empilhadeira Elétrica">Empilhadeira Elétrica</option>
+          <option value="Empilhadeira Retrátil">Empilhadeira Retrátil</option>
+          <option value="Paleteira Elétrica">Paleteira Elétrica</option>
+          <option value="Paleteira Manual">Paleteira Manual</option>
+        </select>
+        <select class="filter-select" id="filtTurno" onchange="renderOperadores()">
+          <option value="">Todos os turnos</option>
+          <option value="1º Turno">1º Turno</option>
+          <option value="2º Turno">2º Turno</option>
+          <option value="3º Turno">3º Turno</option>
+          <option value="Administrativo">Administrativo</option>
+        </select>
+      </div>
+      <div class="op-grid" id="opGrid"></div>
+      <div class="empty" id="opEmpty" style="display:none;"><div class="empty-ico">👷</div><div class="empty-txt">Nenhum operador encontrado</div></div>
+    </div>
+
+    <!-- VENCIMENTOS -->
+    <div class="page" id="page-vencimentos">
+      <div class="filter-bar">
+        <select class="filter-select" id="filtVencStatus" onchange="renderVencimentos()">
+          <option value="">Todos os status</option>
+          <option value="vencido">🔴 Vencidos</option>
+          <option value="alerta">⚠️ Alerta 30 dias</option>
+          <option value="valido">✅ Válidos</option>
+        </select>
+        <select class="filter-select" id="filtVencEquip" onchange="renderVencimentos()">
+          <option value="">Todos equipamentos</option>
+          <option value="Empilhadeira GLP">Empilhadeira GLP</option>
+          <option value="Empilhadeira Elétrica">Empilhadeira Elétrica</option>
+          <option value="Empilhadeira Retrátil">Empilhadeira Retrátil</option>
+          <option value="Paleteira Elétrica">Paleteira Elétrica</option>
+          <option value="Paleteira Manual">Paleteira Manual</option>
+        </select>
+        <button class="btn btn-excel" onclick="exportExcel()">📊 Exportar Excel</button>
+      </div>
+      <div id="vencList"></div>
+      <div class="empty" id="vencEmpty" style="display:none;"><div class="empty-ico">✅</div><div class="empty-txt">Nenhum vencimento encontrado</div></div>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div class="page" id="page-historico">
+      <div class="filter-bar">
+        <input class="search-input" type="text" placeholder="🔍 Buscar operador..." oninput="renderHistorico()" id="searchHist">
+        <button class="btn btn-excel" onclick="exportExcel()">📊 Exportar Excel</button>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 Histórico de cursos e habilitações</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Operador</th><th>Matrícula</th><th>Setor</th><th>Turno</th><th>Equipamento</th><th>Curso</th><th>Realização</th><th>Vencimento</th><th>Status</th><th>Dias</th></tr></thead>
+            <tbody id="tbHistorico"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="histEmpty" style="display:none;"><div class="empty-ico">📋</div><div class="empty-txt">Nenhum registro encontrado</div></div>
+      </div>
+    </div>
+
+    <!-- CADASTRO -->
+    <div class="page" id="page-cadastro">
+      <div class="card" style="max-width:680px;margin:0 auto;">
+        <div class="card-title">➕ Cadastrar / Editar Operador</div>
+        <input type="hidden" id="editId">
+
+        <div class="form-section">Dados Pessoais</div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nome completo *</label><input class="form-input" type="text" id="fNome" placeholder="Ex: João Silva"></div>
+          <div class="form-group"><label class="form-label">Matrícula *</label><input class="form-input" type="text" id="fMat" placeholder="Ex: 00123"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Setor *</label><input class="form-input" type="text" id="fSetor" placeholder="Ex: Armazém, Expedição..."></div>
+          <div class="form-group"><label class="form-label">Turno *</label>
+            <select class="form-select" id="fTurno">
+              <option value="">Selecione...</option>
+              <option>1º Turno</option><option>2º Turno</option><option>3º Turno</option><option>Administrativo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">E-mail</label><input class="form-input" type="email" id="fEmail" placeholder="operador@empresa.com.br"></div>
+
+        <div class="form-section">Habilitação e Equipamento</div>
+        <div class="form-group"><label class="form-label">Tipo de equipamento habilitado *</label>
+          <select class="form-select" id="fEquip">
+            <option value="">Selecione...</option>
+            <option>Empilhadeira GLP</option>
+            <option>Empilhadeira Elétrica</option>
+            <option>Empilhadeira Retrátil</option>
+            <option>Paleteira Elétrica</option>
+            <option>Paleteira Manual</option>
+          </select>
+        </div>
+
+        <div class="form-section">Curso de Capacitação (NR-11)</div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nome do curso *</label><input class="form-input" type="text" id="fCurso" placeholder="Ex: NR-11 Operador de Empilhadeira" value="NR-11 Operador de Empilhadeira"></div>
+          <div class="form-group"><label class="form-label">Instituição</label><input class="form-input" type="text" id="fInst" placeholder="Ex: SENAI, empresa..."></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Carga horária (h)</label><input class="form-input" type="number" id="fCH" placeholder="Ex: 24"></div>
+          <div class="form-group"><label class="form-label">Validade (meses)</label>
+            <select class="form-select" id="fValidade">
+              <option value="12">12 meses (padrão NR-11)</option>
+              <option value="6">6 meses</option>
+              <option value="24">24 meses</option>
+              <option value="36">36 meses</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Data de realização *</label><input class="form-input" type="date" id="fDataReal" oninput="calcVencimento()"></div>
+          <div class="form-group"><label class="form-label">Data de vencimento</label><input class="form-input" type="date" id="fDataVenc" readonly style="background:#f4f7f4;"><div class="form-hint">Calculado automaticamente</div></div>
+        </div>
+        <div class="form-group"><label class="form-label">Observações</label><textarea class="form-input" id="fObs" rows="3" placeholder="Observações adicionais..." style="resize:vertical;"></textarea></div>
+
+        <div class="btn-group" style="margin-top:6px;">
+          <button class="btn btn-primary" onclick="salvarOperador()">💾 Salvar operador</button>
+          <button class="btn btn-outline" onclick="limparForm()">✕ Limpar</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODAL DETALHE OPERADOR -->
+<div class="modal-overlay" id="modalOp">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModalOp()">✕</button>
+    <div id="modalOpContent"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══ DADOS ═══ */
+let OPERADORES = [];
+let charts = {};
+
+/* ═══ FIREBASE ═══ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCaQADZAPMVR8JyK5N8jb0Rp_CsGcCu1Ng",
+  authDomain: "gestaodeoperadores.firebaseapp.com",
+  databaseURL: "https://gestaodeoperadores-default-rtdb.firebaseio.com",
+  projectId: "gestaodeoperadores",
+  storageBucket: "gestaodeoperadores.firebasestorage.app",
+  messagingSenderId: "634148739648",
+  appId: "1:634148739648:web:fa05377347bf177fb11da5"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const PATH_OP = 'operadores';
+const REF_OP = db.ref(PATH_OP);
+function fbKey(v){return String(v).trim().replace(/[.#$\[\]\/]/g,'_');}
+function setSync(msg){const el=document.getElementById('syncStatus');if(el)el.textContent=msg;}
+function refreshActive(){
+  updateNavBadges();
+  const p=document.querySelector('.page.active');if(!p)return;
+  const id=p.id.replace('page-','');
+  if(id==='capa')renderCapa();
+  if(id==='dashboard')renderDashboard();
+  if(id==='operadores')renderOperadores();
+  if(id==='vencimentos')renderVencimentos();
+  if(id==='historico')renderHistorico();
+}
+firebase.auth().signInAnonymously().catch(()=>setSync('⚠️ Erro de autenticação'));
+firebase.auth().onAuthStateChanged(u=>{
+  if(!u)return;
+  REF_OP.on('value',snap=>{
+    OPERADORES=Object.values(snap.val()||{});
+    setSync('☁️ Sincronizado às '+new Date().toLocaleTimeString('pt-BR'));
+    refreshActive();
+  },()=>setSync('⚠️ Sem permissão de leitura — verifique as rules'));
+});
+
+/* ═══ UTILS ═══ */
+function hoje(){ return new Date(); }
+function diasParaVencer(dataVenc){
+  const venc = new Date(dataVenc+'T00:00:00');
+  const dif = Math.ceil((venc - hoje())/(1000*60*60*24));
+  return dif;
+}
+function statusOp(op){
+  const dias = diasParaVencer(op.dataVenc);
+  if(dias < 0) return 'vencido';
+  if(dias <= 30) return 'alerta';
+  return 'valido';
+}
+function fmtData(d){ if(!d)return '—'; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }
+function BRL(v){ return 'R$ '+Number(v).toFixed(2).replace('.',','); }
+function toast(msg,type='success'){ const el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+type+' show'; setTimeout(()=>el.className='toast',3000); }
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+
+/* ═══ NAV ═══ */
+function goTo(page, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(el)el.classList.add('active');
+  const titles={
+    capa:['Gestão de Operadores','Controle de habilitações e vencimentos'],
+    dashboard:['Dashboard','Visão geral dos operadores'],
+    operadores:['Operadores','Lista completa de operadores'],
+    vencimentos:['Vencimentos','Controle de vencimentos e alertas'],
+    historico:['Histórico','Histórico de cursos e habilitações'],
+    cadastro:['Cadastro','Cadastrar novo operador'],
+  };
+  const t=titles[page]||['Gestão de Operadores',''];
+  document.getElementById('pageTitle').textContent=t[0];
+  document.getElementById('pageSub').textContent=t[1];
+  if(page==='dashboard'){renderDashboard();}
+  if(page==='operadores'){renderOperadores();}
+  if(page==='vencimentos'){renderVencimentos();}
+  if(page==='historico'){renderHistorico();}
+  if(page==='capa'){renderCapa();}
+  document.getElementById('sidebar').classList.remove('open');
+  updateNavBadges();
+}
+
+/* ═══ BADGES NAV ═══ */
+function updateNavBadges(){
+  const venc = OPERADORES.filter(o=>statusOp(o)!=='valido').length;
+  const nb = document.getElementById('nb-venc');
+  nb.textContent = venc;
+  nb.style.display = venc > 0 ? 'inline' : 'none';
+}
+
+/* ═══ CAPA ═══ */
+function renderCapa(){
+  const validos=OPERADORES.filter(o=>statusOp(o)==='valido').length;
+  const alerta=OPERADORES.filter(o=>statusOp(o)==='alerta').length;
+  const vencidos=OPERADORES.filter(o=>statusOp(o)==='vencido').length;
+  document.getElementById('cap-validos').textContent=validos;
+  document.getElementById('cap-alerta').textContent=alerta;
+  document.getElementById('cap-vencidos').textContent=vencidos;
+}
+
+/* ═══ DASHBOARD ═══ */
+function renderDashboard(){
+  const total=OPERADORES.length;
+  const validos=OPERADORES.filter(o=>statusOp(o)==='valido').length;
+  const alerta=OPERADORES.filter(o=>statusOp(o)==='alerta').length;
+  const vencidos=OPERADORES.filter(o=>statusOp(o)==='vencido').length;
+  document.getElementById('kpi-total').textContent=total;
+  document.getElementById('kpi-validos').textContent=validos;
+  document.getElementById('kpi-alerta').textContent=alerta;
+  document.getElementById('kpi-vencidos').textContent=vencidos;
+
+  // Alertas
+  const banners=document.getElementById('alertBanners');
+  banners.innerHTML='';
+  if(vencidos>0){banners.innerHTML+=`<div class="alert-banner red"><div class="alert-ico">🔴</div><div class="alert-txt"><div class="alert-title red">🚨 ${vencidos} operador${vencidos>1?'es':''} com certificado VENCIDO!</div><div class="alert-sub">Renovação imediata necessária para operação segura conforme NR-11</div></div></div>`;}
+  if(alerta>0){banners.innerHTML+=`<div class="alert-banner"><div class="alert-ico">⚠️</div><div class="alert-txt"><div class="alert-title">${alerta} operador${alerta>1?'es':''} vencem nos próximos 30 dias</div><div class="alert-sub">Agende a reciclagem para manter a conformidade com a NR-11</div></div></div>`;}
+
+  // Gráfico status
+  const csEl=document.getElementById('chartStatus');
+  if(charts.status)charts.status.destroy();
+  charts.status=new Chart(csEl,{type:'doughnut',data:{labels:['✅ Válidos','⚠️ Alerta','🔴 Vencidos'],datasets:[{data:[validos,alerta,vencidos],backgroundColor:['#4aaa2a','#f5a623','#dc2626'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}}}}});
+
+  // Gráfico equipamentos
+  const equipMap={};
+  OPERADORES.forEach(o=>{equipMap[o.equip]=(equipMap[o.equip]||0)+1;});
+  const ceEl=document.getElementById('chartEquip');
+  if(charts.equip)charts.equip.destroy();
+  charts.equip=new Chart(ceEl,{type:'bar',data:{labels:Object.keys(equipMap),datasets:[{data:Object.values(equipMap),backgroundColor:['#2d7a2d','#4aaa2a','#f5a623','#e8921a','#1a5a1a'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8aaa8a',font:{size:9},maxRotation:20},grid:{display:false}},y:{ticks:{color:'#8aaa8a',font:{size:10}},grid:{color:'#e8f0e8'}}}}});
+
+  // Próximos vencimentos
+  const proximos=OPERADORES.filter(o=>statusOp(o)!=='valido').sort((a,b)=>diasParaVencer(a.dataVenc)-diasParaVencer(b.dataVenc)).slice(0,5);
+  const dv=document.getElementById('dashVencimentos');
+  if(!proximos.length){dv.innerHTML='<div class="empty"><div class="empty-ico">✅</div><div class="empty-txt">Nenhum vencimento nos próximos 30 dias</div></div>';return;}
+  dv.innerHTML=proximos.map(o=>{const st=statusOp(o),dias=diasParaVencer(o.dataVenc);return`<div class="venc-item ${st}"><div class="venc-ico ${st}">${st==='vencido'?'🔴':st==='alerta'?'⚠️':'✅'}</div><div class="venc-info"><div class="venc-name">${o.nome}</div><div class="venc-detail">${o.equip} • ${o.setor} • ${o.turno}</div></div><div class="venc-right"><div class="venc-dias ${st}">${dias<0?`${Math.abs(dias)}d vencido`:dias===0?'Vence hoje':`${dias}d`}</div><div class="venc-data">Vence: ${fmtData(o.dataVenc)}</div></div></div>`;}).join('');
+}
+
+/* ═══ OPERADORES ═══ */
+function renderOperadores(){
+  const q=(document.querySelector('#page-operadores .search-input')?.value||'').toLowerCase();
+  const st=document.getElementById('filtStatus').value;
+  const eq=document.getElementById('filtEquip').value;
+  const tu=document.getElementById('filtTurno').value;
+  const dados=OPERADORES.filter(o=>{
+    if(q&&!o.nome.toLowerCase().includes(q)&&!o.mat.includes(q))return false;
+    if(st&&statusOp(o)!==st)return false;
+    if(eq&&o.equip!==eq)return false;
+    if(tu&&o.turno!==tu)return false;
+    return true;
+  });
+  const grid=document.getElementById('opGrid');
+  const empty=document.getElementById('opEmpty');
+  if(!dados.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=dados.map(o=>{
+    const st=statusOp(o),dias=diasParaVencer(o.dataVenc);
+    const initials=o.nome.split(' ').slice(0,2).map(n=>n[0]).join('');
+    return`<div class="op-card ${st}" onclick="openOp('${fbKey(o.mat)}')">
+      <div class="op-header">
+        <div class="op-avatar">${initials}</div>
+        <div><div class="op-name">${o.nome}</div><div class="op-mat">Mat: ${o.mat}</div></div>
+      </div>
+      <div class="op-body">
+        <div class="op-row"><span class="op-row-label">Setor</span><span class="op-row-val">${o.setor}</span></div>
+        <div class="op-row"><span class="op-row-label">Turno</span><span class="op-row-val">${o.turno}</span></div>
+        <div class="op-row"><span class="op-row-label">Equipamento</span><span class="op-row-val">${o.equip}</span></div>
+        <div class="op-row"><span class="op-row-label">Vencimento</span><span class="op-row-val">${fmtData(o.dataVenc)}</span></div>
+      </div>
+      <div class="op-footer">
+        <div class="dias-badge ${st}">${st==='vencido'?'🔴 '+Math.abs(dias)+'d vencido':st==='alerta'?'⚠️ '+dias+'d restantes':'✅ '+dias+'d restantes'}</div>
+        <span class="status-pill ${st==='valido'?'sp-valido':st==='alerta'?'sp-alerta':'sp-vencido'}">${st==='valido'?'Válido':st==='alerta'?'Alerta':'Vencido'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══ VENCIMENTOS ═══ */
+function renderVencimentos(){
+  const st=document.getElementById('filtVencStatus').value;
+  const eq=document.getElementById('filtVencEquip').value;
+  const dados=OPERADORES.filter(o=>{
+    if(st&&statusOp(o)!==st)return false;
+    if(eq&&o.equip!==eq)return false;
+    return true;
+  }).sort((a,b)=>diasParaVencer(a.dataVenc)-diasParaVencer(b.dataVenc));
+  const list=document.getElementById('vencList');
+  const empty=document.getElementById('vencEmpty');
+  if(!dados.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=dados.map(o=>{
+    const s=statusOp(o),dias=diasParaVencer(o.dataVenc);
+    return`<div class="venc-item ${s}">
+      <div class="venc-ico ${s}">${s==='vencido'?'🔴':s==='alerta'?'⚠️':'✅'}</div>
+      <div class="venc-info">
+        <div class="venc-name">${o.nome} <span style="font-size:10px;color:#8aaa8a;font-weight:400;">• Mat: ${o.mat}</span></div>
+        <div class="venc-detail">${o.equip} • ${o.setor} • ${o.turno}</div>
+        <div style="margin-top:4px;font-size:11px;color:#4a6a4a;">${o.curso}</div>
+      </div>
+      <div class="venc-right">
+        <div class="venc-dias ${s}">${dias<0?Math.abs(dias)+'d vencido':dias===0?'Vence hoje':dias+'d restantes'}</div>
+        <div class="venc-data">Realização: ${fmtData(o.dataReal)}</div>
+        <div class="venc-data">Vencimento: ${fmtData(o.dataVenc)}</div>
+        <div style="margin-top:6px;display:flex;gap:5px;justify-content:flex-end;">
+          <button class="btn btn-outline" style="padding:4px 10px;font-size:10px;" onclick="editOp('${fbKey(o.mat)}')">✏️ Editar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══ HISTÓRICO ═══ */
+function renderHistorico(){
+  const q=(document.getElementById('searchHist')?.value||'').toLowerCase();
+  const dados=OPERADORES.filter(o=>!q||o.nome.toLowerCase().includes(q)||o.mat.includes(q));
+  const tb=document.getElementById('tbHistorico');
+  const empty=document.getElementById('histEmpty');
+  if(!dados.length){tb.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const s_colors={valido:'sp-valido',alerta:'sp-alerta',vencido:'sp-vencido'};
+  const s_labels={valido:'Válido',alerta:'Alerta',vencido:'Vencido'};
+  tb.innerHTML=dados.map(o=>{
+    const s=statusOp(o),dias=diasParaVencer(o.dataVenc);
+    return`<tr>
+      <td><strong>${o.nome}</strong></td>
+      <td>${o.mat}</td>
+      <td>${o.setor}</td>
+      <td>${o.turno}</td>
+      <td><span class="etag">${o.equip}</span></td>
+      <td>${o.curso}</td>
+      <td>${fmtData(o.dataReal)}</td>
+      <td>${fmtData(o.dataVenc)}</td>
+      <td><span class="status-pill ${s_colors[s]}">${s_labels[s]}</span></td>
+      <td style="font-weight:700;color:${s==='valido'?'#4aaa2a':s==='alerta'?'#e8921a':'#dc2626'}">${dias<0?Math.abs(dias)+'d venc.':dias+'d'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══ DETALHE OPERADOR ═══ */
+function openOp(matKey){
+  const o=OPERADORES.find(x=>fbKey(x.mat)===matKey);
+  if(!o)return;
+  const s=statusOp(o),dias=diasParaVencer(o.dataVenc);
+  const initials=o.nome.split(' ').slice(0,2).map(n=>n[0]).join('');
+  document.getElementById('modalOpContent').innerHTML=`
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+      <div class="op-avatar" style="width:56px;height:56px;font-size:22px;border-radius:14px;">${initials}</div>
+      <div><div style="font-size:17px;font-weight:700;">${o.nome}</div><div style="font-size:12px;color:#8aaa8a;margin-top:2px;">Mat: ${o.mat} • ${o.setor} • ${o.turno}</div></div>
+    </div>
+    <div style="background:${s==='valido'?'#e8f5e0':s==='alerta'?'#fff8ed':'#fff5f5'};border-radius:10px;padding:14px;margin-bottom:14px;text-align:center;">
+      <div style="font-size:28px;font-weight:700;color:${s==='valido'?'#4aaa2a':s==='alerta'?'#e8921a':'#dc2626'};">${dias<0?Math.abs(dias)+' dias vencido':dias===0?'Vence hoje!':dias+' dias restantes'}</div>
+      <div style="font-size:12px;color:#8aaa8a;margin-top:4px;">Vencimento: ${fmtData(o.dataVenc)}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div style="background:#f4f7f4;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#8aaa8a;text-transform:uppercase;font-weight:600;">Equipamento</div><div style="font-size:13px;font-weight:600;margin-top:4px;">${o.equip}</div></div>
+      <div style="background:#f4f7f4;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#8aaa8a;text-transform:uppercase;font-weight:600;">Curso</div><div style="font-size:13px;font-weight:600;margin-top:4px;">${o.curso}</div></div>
+      <div style="background:#f4f7f4;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#8aaa8a;text-transform:uppercase;font-weight:600;">Instituição</div><div style="font-size:13px;font-weight:600;margin-top:4px;">${o.inst||'—'}</div></div>
+      <div style="background:#f4f7f4;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#8aaa8a;text-transform:uppercase;font-weight:600;">Carga horária</div><div style="font-size:13px;font-weight:600;margin-top:4px;">${o.ch||'—'}h</div></div>
+      <div style="background:#f4f7f4;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#8aaa8a;text-transform:uppercase;font-weight:600;">Realização</div><div style="font-size:13px;font-weight:600;margin-top:4px;">${fmtData(o.dataReal)}</div></div>
+      <div style="background:#f4f7f4;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#8aaa8a;text-transform:uppercase;font-weight:600;">Vencimento</div><div style="font-size:13px;font-weight:600;margin-top:4px;">${fmtData(o.dataVenc)}</div></div>
+    </div>
+    ${o.obs?`<div style="background:#f4f7f4;border-radius:8px;padding:12px;margin-bottom:14px;"><div style="font-size:10px;color:#8aaa8a;font-weight:600;text-transform:uppercase;">Observações</div><div style="font-size:12px;margin-top:4px;">${o.obs}</div></div>`:''}
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="editOp('${fbKey(o.mat)}');closeModalOp();" style="flex:1;">✏️ Editar</button>
+      <button class="btn btn-danger" onclick="excluirOp('${fbKey(o.mat)}');closeModalOp();" style="flex:1;">🗑️ Excluir</button>
+    </div>`;
+  document.getElementById('modalOp').classList.add('open');
+}
+function closeModalOp(){ document.getElementById('modalOp').classList.remove('open'); }
+
+/* ═══ CADASTRO ═══ */
+function calcVencimento(){
+  const dr=document.getElementById('fDataReal').value;
+  const val=parseInt(document.getElementById('fValidade').value)||12;
+  if(!dr)return;
+  const d=new Date(dr+'T00:00:00');
+  d.setMonth(d.getMonth()+val);
+  document.getElementById('fDataVenc').value=d.toISOString().slice(0,10);
+}
+
+function salvarOperador(){
+  const nome=document.getElementById('fNome').value.trim();
+  const mat=document.getElementById('fMat').value.trim();
+  const setor=document.getElementById('fSetor').value.trim();
+  const turno=document.getElementById('fTurno').value;
+  const equip=document.getElementById('fEquip').value;
+  const dataReal=document.getElementById('fDataReal').value;
+  if(!nome||!mat||!setor||!turno||!equip||!dataReal){toast('Preencha os campos obrigatórios!','error');return;}
+  const editKey=document.getElementById('editId').value;
+  const key=fbKey(mat);
+  if(!editKey&&OPERADORES.some(o=>fbKey(o.mat)===key)){toast('Matrícula já cadastrada — edite o registro existente!','error');return;}
+  const reg={
+    nome,mat,setor,turno,
+    email:document.getElementById('fEmail').value.trim(),
+    equip,
+    curso:document.getElementById('fCurso').value.trim()||'NR-11',
+    inst:document.getElementById('fInst').value.trim(),
+    ch:parseInt(document.getElementById('fCH').value)||0,
+    validade:parseInt(document.getElementById('fValidade').value)||12,
+    dataReal,
+    dataVenc:document.getElementById('fDataVenc').value,
+    obs:document.getElementById('fObs').value.trim(),
+    atualizadoEm:new Date().toISOString()
+  };
+  const ops={};
+  ops[PATH_OP+'/'+key]=reg;
+  if(editKey&&fbKey(editKey)!==key)ops[PATH_OP+'/'+fbKey(editKey)]=null;
+  db.ref().update(ops)
+    .then(()=>{toast(editKey?'Operador atualizado! ✅':'Operador cadastrado! ✅');limparForm();})
+    .catch(()=>toast('Erro ao salvar no Firebase!','error'));
+}
+
+function editOp(matKey){
+  const o=OPERADORES.find(x=>fbKey(x.mat)===matKey);if(!o)return;
+  document.getElementById('editId').value=o.mat;
+  document.getElementById('fNome').value=o.nome;
+  document.getElementById('fMat').value=o.mat;
+  document.getElementById('fSetor').value=o.setor;
+  document.getElementById('fTurno').value=o.turno;
+  document.getElementById('fEmail').value=o.email||'';
+  document.getElementById('fEquip').value=o.equip;
+  document.getElementById('fCurso').value=o.curso;
+  document.getElementById('fInst').value=o.inst||'';
+  document.getElementById('fCH').value=o.ch||'';
+  document.getElementById('fValidade').value=o.validade||12;
+  document.getElementById('fDataReal').value=o.dataReal;
+  document.getElementById('fDataVenc').value=o.dataVenc;
+  document.getElementById('fObs').value=o.obs||'';
+  goTo('cadastro',null);
+  window.scrollTo(0,0);
+}
+
+function excluirOp(matKey){
+  if(!confirm('Confirma a exclusão deste operador?'))return;
+  REF_OP.child(matKey).remove()
+    .then(()=>toast('Operador excluído','error'))
+    .catch(()=>toast('Erro ao excluir!','error'));
+}
+
+function limparForm(){
+  ['editId','fNome','fMat','fSetor','fEmail','fCurso','fInst','fCH','fDataReal','fDataVenc','fObs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('fTurno').value='';
+  document.getElementById('fEquip').value='';
+  document.getElementById('fValidade').value='12';
+}
+
+/* ═══ RESET ═══ */
+function resetDados(){
+  if(!confirm('⚠️ Isso vai apagar TODOS os operadores cadastrados!\n\nDeseja continuar?'))return;
+  if(!confirm('Confirma o reset completo?'))return;
+  REF_OP.remove()
+    .then(()=>toast('Dados resetados!','error'))
+    .catch(()=>toast('Erro ao resetar!','error'));
+}
+
+/* ═══ EXPORT EXCEL ═══ */
+function exportExcel(){
+  const wb=XLSX.utils.book_new();
+  const rows=[['Nome','Matrícula','Setor','Turno','Email','Equipamento','Curso','Instituição','C.H (h)','Validade (m)','Realização','Vencimento','Status','Dias'],...OPERADORES.map(o=>{const s=statusOp(o),d=diasParaVencer(o.dataVenc);return[o.nome,o.mat,o.setor,o.turno,o.email,o.equip,o.curso,o.inst,o.ch,o.validade,fmtData(o.dataReal),fmtData(o.dataVenc),s==='valido'?'Válido':s==='alerta'?'Alerta':'Vencido',d];})];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Operadores');
+  const vencidos=OPERADORES.filter(o=>statusOp(o)==='vencido');
+  const alertas=OPERADORES.filter(o=>statusOp(o)==='alerta');
+  if(vencidos.length){XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Nome','Equipamento','Vencimento','Dias vencido'],...vencidos.map(o=>[o.nome,o.equip,fmtData(o.dataVenc),Math.abs(diasParaVencer(o.dataVenc))])]),'Vencidos');}
+  if(alertas.length){XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Nome','Equipamento','Vencimento','Dias restantes'],...alertas.map(o=>[o.nome,o.equip,fmtData(o.dataVenc),diasParaVencer(o.dataVenc)])]),'Alertas 30 dias');}
+  XLSX.writeFile(wb,'gestao_operadores_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Excel exportado! 📊');
+}
+
+/* ═══ INIT ═══ */
+renderCapa();
+updateNavBadges();
+</script>
+</body>
+</html>
